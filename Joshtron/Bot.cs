@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using Discord;
+using Discord.Commands;
 
 namespace Joshtron
 {
@@ -48,6 +49,20 @@ namespace Joshtron
             _client = new DiscordClient();
             _client.MessageReceived += ClientOnMessageReceived;
 
+            _client.UsingCommands(x =>
+            {
+                x.AllowMentionPrefix = true;
+                x.HelpMode = HelpMode.Public;
+            });
+
+            _client.GetService<CommandService>().CreateCommand("hug")
+                .Description("Hug a person.")
+                .Parameter("HuggedPerson")
+                .Do(async e =>
+                {
+                    await e.Channel.SendMessage($"/me hugs {e.GetArg("HuggedPerson")}. :hearts:");
+                });
+
             new Task(async () => await _client.Connect(_token)).Start();
         }
 
@@ -78,11 +93,19 @@ namespace Joshtron
             if (e.Message.IsAuthor)
                 return;
 
-            // Only respond if user is talking to me.
-            if (e.Channel.IsPrivate || e.Message.IsMentioningMe())
+            // Lee is a special case.
+            if (LeeDetector.IsLee(e.Message.User))
             {
-                await e.Channel.SendMessage("Hey, " + e.Message.User);
+                var msg = e.Message.ToString().ToLower();
+                if (msg.Contains("meme") || msg.Contains("meming"))
+                {
+                    await e.Channel.SendTTSMessage("What a memelord.");
+                }
             }
+
+            // Only respond if user is talking to me.
+            if (!e.Channel.IsPrivate && !e.Message.IsMentioningMe())
+                return;
         }
 
         /// <summary>
